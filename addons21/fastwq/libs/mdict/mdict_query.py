@@ -11,7 +11,7 @@ from io import BytesIO
 from struct import pack, unpack
 
 from .readmdict import MDD, MDX
-
+import aqt
 # import chardet
 
 # LZO compression is used for engine version < 2.0
@@ -54,10 +54,7 @@ class IndexBuilder(object):
         # make index anyway
         if force_rebuild:
             self._make_mdx_index(self._mdx_db)
-            if os.path.isfile(_filename + '.mdd'):
-                self._mdd_file = _filename + ".mdd"
-                self._mdd_db = _filename + ".mdd.db"
-                self._make_mdd_index(self._mdd_db)
+            self._build_mdd_dbs(_filename)
 
         if os.path.isfile(self._mdx_db):
             #read from META table
@@ -73,11 +70,7 @@ class IndexBuilder(object):
                 conn.close()
                 self._make_mdx_index(self._mdx_db)
                 print("mdx.db rebuilt!")
-                if os.path.isfile(_filename + '.mdd'):
-                    self._mdd_file = _filename + ".mdd"
-                    self._mdd_db = _filename + ".mdd.db"
-                    self._make_mdd_index(self._mdd_db)
-                    print("mdd.db rebuilt!")
+                self._build_mdd_dbs(_filename)
                 return None
             cursor = conn.execute(
                 "SELECT * FROM META WHERE key = \"encoding\"")
@@ -112,12 +105,17 @@ class IndexBuilder(object):
         else:
             self._make_mdx_index(self._mdx_db)
 
-        if os.path.isfile(_filename + ".mdd"):
-            self._mdd_file = _filename + ".mdd"
-            self._mdd_db = _filename + ".mdd.db"
-            if not os.path.isfile(self._mdd_db):
-                self._make_mdd_index(self._mdd_db)
-        pass
+        self._build_mdd_dbs(_filename)
+
+    def _build_mdd_dbs(self, file_name):
+        self._mdds = []
+        for x in ['','.1','.2','.3','.4']:
+            mdd_file = file_name + x + '.mdd'
+            mdd_db = mdd_file + '.db'
+            if os.path.isfile(mdd_file) and not os.path.isfile(mdd_db):
+                self._make_mdd_index(mdd_file, mdd_db)
+            if os.path.isfile(mdd_file) and os.path.isfile(mdd_db):
+                self._mdds.append({ 'mdd_file' : mdd_file, 'mdd_db': mdd_db})
 
     def _replace_stylesheet(self, txt):
         # substitute stylesheet definition
@@ -198,10 +196,10 @@ class IndexBuilder(object):
         self._title = meta['title']
         self._description = meta['description']
 
-    def _make_mdd_index(self, db_name):
+    def _make_mdd_index(self, mdd_file, db_name):
         if os.path.exists(db_name):
             os.remove(db_name)
-        mdd = MDD(self._mdd_file)
+        mdd = MDD(mdd_file)
         self._mdd_db = db_name
         index_list = mdd.get_index(check_block=self._check)
         conn = sqlite3.connect(db_name)
@@ -307,11 +305,14 @@ class IndexBuilder(object):
 
     def mdd_lookup(self, keyword, ignorecase=None):
         lookup_result_list = []
-        indexes = self.lookup_indexes(self._mdd_db, keyword, ignorecase)
-        with open(self._mdd_file, 'rb') as mdd_file:
-            for index in indexes:
-                lookup_result_list.append(
-                    self.get_mdd_by_index(mdd_file, index))
+        for item in self._mdds:
+            indexes = self.lookup_indexes(item['mdd_db'], keyword, ignorecase)
+            if indexes:
+                with open(item['mdd_file'], 'rb') as mdd_file:
+                    for index in indexes:
+                        lookup_result_list.append(
+                            self.get_mdd_by_index(mdd_file, index))
+                break
         return lookup_result_list
 
     @staticmethod

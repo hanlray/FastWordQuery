@@ -93,7 +93,8 @@ def register(labels):
         exports = []
         for method in methods:
             attrs = getattr(method[1], '__export_attrs__', None)
-            if attrs and attrs[1] == -1:
+            #if attrs and attrs[1] == -1:
+            if attrs:
                 exports.append((
                     getattr(method[1], '__def_index__', 0),
                     method[1]

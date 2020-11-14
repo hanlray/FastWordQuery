@@ -61,6 +61,7 @@ try:
 except ImportError:
     import dummy_threading as _threading
 
+import sys
 
 __all__ = [
     'register', 'export', 'copy_static_file', 'with_styles', 'parse_html', 'service_wrap', 'get_hex_name',
@@ -93,13 +94,19 @@ def register(labels):
         exports = []
         for method in methods:
             attrs = getattr(method[1], '__export_attrs__', None)
-            if attrs and attrs[1] == -1:
+            #if cls.__name__ == 'Ldoce6':
+            #    sys.stderr.write(repr(attrs))
+            #    sys.stderr.write(repr(getattr(method[1], '__def_index__', -1)))
+            #if attrs and attrs[1] == -1:
+            if attrs:
                 exports.append((
                     getattr(method[1], '__def_index__', 0),
                     method[1]
                 ))
         exports = sorted(exports)
         for index, method in enumerate(exports):
+            #sys.stderr.write(repr(index))
+            #sys.stderr.write(repr(method))
             attrs = getattr(method[1], '__export_attrs__', None)
             attrs[1] = index
 
@@ -280,7 +287,9 @@ class Service(object):
         flds = dict()
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         for method in methods:
+            print(self._unique)
             export_attrs = getattr(method[1], '__export_attrs__', None)
+            print(export_attrs)
             if export_attrs:
                 label, index = export_attrs[0], export_attrs[1]
                 flds.update({int(index): (label, method[1])})

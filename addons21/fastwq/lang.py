@@ -99,6 +99,8 @@ _arr = [
     ['EXAMPLE', u'例句', u'Examples'],
     ['TRANS', u'翻译', u'Translation'],
     ['DEF', u'释义', u'Definition'],
+    ['DEF_CN_1_part_1_sense_1_sentence', u'中文释义(1词性1词意1例句)', u'Chinese Definition(1 part 1 sense 1 sentence)'],
+    ['DEF_CN_1_part_1_sense_1_sentence_audio', u'中文释义(1词性1词意1例句带音频)', u'Chinese Definition(1 part 1 sense 1 sentence with audio)'],
     ['PHON', u'音标', u'Phonetic Symbols'],
     ['BRE_PHON', u'英式音标', u'Phonetic Symbols (UK)'],
     ['BRE_PHON_NO_PREFIX', u'英式音标无前缀', u'Phonetic Symbols (UK) no prefix'],

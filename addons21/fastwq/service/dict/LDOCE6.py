@@ -12,7 +12,7 @@ MAPPINGS = [
     ['us', [re.compile(VOICE_PATTERN % r'b'), re.compile(VOICE_PATTERN_WQ % (r'amevoice', r'amevoice'))]]
 ]
 LANG_TO_REGEXPS = {lang: regexps for lang, regexps in MAPPINGS}
-DICT_PATH = u'' # u'E:\\BaiduYunDownload\\mdx\\L6mp3.mdx'
+DICT_PATH = u'D:\\dict\\LDOCE6_anki\\L6mp3.mdx'
 
 
 @register([u'本地词典-LDOCE6', u'MDX-LDOCE6'])
@@ -36,7 +36,7 @@ class Ldoce6(MdxService):
     def title(self):
         return getattr(self, '__register_label__', self.unique)
 
-    @export('PHON')
+    @export(u'PHON')
     def fld_phonetic(self):
         html = self.get_html()
         m = re.search(r'<span class="pron">(.*?)</span>', html)

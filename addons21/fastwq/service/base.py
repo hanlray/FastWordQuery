@@ -94,12 +94,6 @@ def register(labels):
         exports = []
         for method in methods:
             attrs = getattr(method[1], '__export_attrs__', None)
-<<<<<<< HEAD
-=======
-            #if cls.__name__ == 'Ldoce6':
-            #    sys.stderr.write(repr(attrs))
-            #    sys.stderr.write(repr(getattr(method[1], '__def_index__', -1)))
->>>>>>> 574c5a693f3b6d256459934a4e60010310bfe3c9
             #if attrs and attrs[1] == -1:
             if attrs:
                 exports.append((

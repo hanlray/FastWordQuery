@@ -240,7 +240,9 @@ def query_flds(note, fileds=None):
                 result.update({task['i']: qr})
                 success_num += 1
         except Exception as e:
-            print(_("NO_QUERY_WORD"), e)
+            import traceback
+            traceback.print_exc()
+            #print(_("NO_QUERY_WORD"), e)
             pass
 
     missed_css = list()

@@ -174,8 +174,12 @@ def with_styles(**styles):
                 copy_static_file(cssfile, new_cssfile)
                 # wrap the css file
                 res, new_cssfile = wrap(res, new_cssfile)
-                res = u'<link type="text/css" rel="stylesheet" href="{0}" />{1}'.format(
-                    new_cssfile, res)
+                if isinstance(res, QueryResult):
+                    res.result = u'<link type="text/css" rel="stylesheet" href="{0}" />{1}'.format(
+                        new_cssfile, res.result)
+                else:
+                    res = u'<link type="text/css" rel="stylesheet" href="{0}" />{1}'.format(
+                        new_cssfile, res)
             if css:
                 res, css = wrap(res, css, is_file=False)
                 res = u'<style>{0}</style>{1}'.format(css, res)
@@ -183,7 +187,7 @@ def with_styles(**styles):
             if not isinstance(res, QueryResult):
                 return QueryResult(result=res, jsfile=jsfile, js=js)
             else:
-                res.set_styles(jsfile=jsfile, js=js)
+                res.set_styles(jsfile=jsfile, js=js, cssfile=cssfile)
                 return res
         return _deco
     return _with
@@ -284,9 +288,9 @@ class Service(object):
         flds = dict()
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         for method in methods:
-            print(self._unique)
+            #print(self._unique)
             export_attrs = getattr(method[1], '__export_attrs__', None)
-            print(export_attrs)
+            #print(export_attrs)
             if export_attrs:
                 label, index = export_attrs[0], export_attrs[1]
                 flds.update({int(index): (label, method[1])})

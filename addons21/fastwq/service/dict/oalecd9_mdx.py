@@ -1,11 +1,13 @@
 #-*- coding:utf-8 -*-
-import os
-import re
 import random
+import re
+import sys
+
+from . import DefinitionLang, EnglishAccent
 from ..base import *
-# from BeautifulSoup import BeautifulSoup
+
 # from bs4 import BeautifulSoup
-import aqt
+from ...libs.bs4 import BeautifulSoup
 
 VOICE_PATTERN = r'<a href="sound:\/\/([\w\/]*\w*\.mp3)"><audio-%s>'
 VOICE_PATTERN_WQ = r'<span class="%s"><a href="sound://([\w/]+\w*\.mp3)">(.*?)</span %s>'
@@ -137,3 +139,124 @@ class oalecd9_mdx(MdxService):
                         my_str = my_str + br_mp3 + us_mp3 + en_text  + cn_text + '<br>'
             return my_str
         return ''
+
+    @export('DEF_EN_2_part_2_sense_2_sentence_audio')
+    def fld_en_222a(self):
+        return self._css(self._format_tab(self._range_definition(DefinitionLang.ENG, 2, 2, 2, True)))
+
+    @staticmethod
+    def _format_tab(def_result):
+        parts = def_result['parts']
+        result = '<div class="tabs">'
+        for i, entry_key in enumerate(parts):
+            result += '''
+                <div class="tab">
+                    <input type="radio" id="{0}" name="tab-group-1"{2}>
+                    <label for="{0}">{0}</label>
+                    <div class="content">{1}</div>
+                </div>
+                '''.format(entry_key, parts[entry_key], ' checked' if i == 0 else '')
+        result += '</div>'
+        print(result)
+        if 'files' in def_result:
+            return QueryResult(result=result, files=def_result['files'])
+
+        return result
+
+    def _range_definition(self, lang, part_count, sense_count, sentence_count, with_audio=False):
+        #print(self.get_html())
+        soup = BeautifulSoup(self.get_html(), 'html.parser')
+        #soup = BeautifulSoup(self.get_html(), 'lxml')
+        entries = soup.find_all("div", class_="cixing_part")
+        part_index = 0
+        parts = {}
+        result = {}
+        files = []
+        for entry in entries:
+            part = entry['id']
+            print(entry)
+
+            senses_text = '<ol>'
+            senses = entry.select('sn-blk')
+            if len(senses) == 0:
+                senses = entry.find_all('sn-gs')
+            for j, sense in enumerate(senses):
+                print(sense)
+                def_elem = sense.select_one('def')
+
+                if lang == DefinitionLang.ENG:
+                    def_elem.select_one('chn').decompose()
+                elif lang == DefinitionLang.CHN:
+                    def_elem = sense.select_one('chn')
+
+                sentences = self._range_sentence(lang, sense, sentence_count, with_audio)
+                if isinstance(sentences, QueryResult):
+                    files.extend(sentences['files'])
+                    sentences = sentences['result']
+
+                senses_text += '<li>{0}{1}</li>'.format(def_elem.get_text(), sentences)
+                print(senses_text)
+
+                if j == (sense_count - 1):
+                    break
+
+            parts[part] = senses_text + '</ol>'
+
+            part_index += 1
+            if part_index == part_count:
+                break
+
+        print(parts)
+        result['parts'] = parts
+        if len(files) > 0:
+            result['files'] = files
+        return result
+
+    def _range_sentence(self, lang, sense_elem, sentence_count, with_audio, accent=EnglishAccent.American):
+        if sentence_count <= 0:
+            return ''
+
+        result = '<ul>'
+        files = []
+        examples = sense_elem.select('x-gs > x-g-blk')
+        for i, example in enumerate(examples):
+            example_text_elem = example.select_one('x-wr > x')
+            if example_text_elem is None:
+                break
+
+            if lang == DefinitionLang.ENG:
+                example_text_elem.select_one('chn').decompose()
+
+            audio = ''
+            if with_audio:
+                audio_elems = example.select('x-wr > audio-wr a')
+                if len(audio_elems) >= 1:
+                    if len(audio_elems) == 1:
+                        audio_elem = audio_elems[0]
+                    else:
+                        if accent == EnglishAccent.British:
+                            audio_elem = audio_elems[0]
+                        elif accent == EnglishAccent.American:
+                            audio_elem = audio_elems[1]
+
+                    audio_href = audio_elem['href']
+                    audio_path = audio_href.replace('sound:/', '')
+                    name = get_hex_name('mdx-' + self.unique.lower(), audio_path, 'mp3')
+                    name = self.save_file(audio_path, name)
+                    if name:
+                        audio = self.get_anki_label(name, 'audio')
+                        files.append(name)
+
+            result += '<li>{0}{1}</li>'.format(example_text_elem.get_text(), audio)
+            if i == (sentence_count - 1):
+                break
+
+        result += '</ul>'
+        if len(files) > 0:
+            return QueryResult(result=result, files=files)
+
+        return result
+
+    @with_styles(cssfile='_common.css')
+    def _css(self, val):
+        return val

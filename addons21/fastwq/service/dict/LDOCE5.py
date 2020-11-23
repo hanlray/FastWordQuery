@@ -167,7 +167,7 @@ class Ldoce5plus(MdxService):
         result['parts'] = parts
         if len(files) > 0:
             result['files'] = files
-        print(result)
+        #print(result)
         return result
 
     def _range_sentence(self, lang, sense_elem, sentence_count, with_audio):

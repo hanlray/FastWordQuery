@@ -142,11 +142,11 @@ class oalecd9_mdx(MdxService):
 
     @export('DEF_EN_2_part_2_sense_2_sentence_audio')
     def fld_en_222a(self):
-        return self._css(self._format_tab(self._range_definition(DefinitionLang.ENG, 2, 2, 2, True)))
+        return self._css(self._range_definition(DefinitionLang.ENG, 2, 2, 2, True))
 
     @staticmethod
-    def _format_tab(def_result):
-        parts = def_result['parts']
+    def _format_tab(parts):
+        #parts = def_result['parts']
         result = '<div class="tabs">'
         for i, entry_key in enumerate(parts):
             result += '''
@@ -157,37 +157,62 @@ class oalecd9_mdx(MdxService):
                 </div>
                 '''.format(entry_key, parts[entry_key], ' checked' if i == 0 else '')
         result += '</div>'
-        print(result)
+        #print(result)
+        '''
         if 'files' in def_result:
             return QueryResult(result=result, files=def_result['files'])
-
+        '''
         return result
 
     def _range_definition(self, lang, part_count, sense_count, sentence_count, with_audio=False):
-        #print(self.get_html())
+        print(self.get_html())
         soup = BeautifulSoup(self.get_html(), 'html.parser')
-        #soup = BeautifulSoup(self.get_html(), 'lxml')
-        entries = soup.find_all("div", class_="cixing_part")
+
+        part_elems = soup.find_all("div", class_="cixing_part")
+        pos_len = 0
+        if len(part_elems) == 0:
+            part_elems = soup.find_all('h-g')
+            if len(part_elems) == 0:
+                return ''
+            pos_len = len(part_elems[0].select('h-g > top-g pos-g pos-blk pos'))
+            #top_g = part_elems[0].find('top-g')
+            #pos_len = len(top_g.select('pos-g pos-blk pos'))
+        
+        if pos_len > 1:
+            label_g_blk = part_elems[0].select_one('label-g-blk').get_text()
+            xr_gs = part_elems[0].select_one('xr-gs').get_text()
+            return label_g_blk + xr_gs
+
+        result = {}
         part_index = 0
         parts = {}
-        result = {}
         files = []
-        for entry in entries:
-            part = entry['id']
-            print(entry)
+        for part_elem in part_elems:
+            if part_elem.name == 'div':
+                part = part_elem['id']
+            elif part_elem.name == 'h-g':
+                part = part_elem.select_one('top-g pos-g pos-blk pos').get_text()
 
-            senses_text = '<ol>'
-            senses = entry.select('sn-blk')
-            if len(senses) == 0:
-                senses = entry.find_all('sn-gs')
+            if part_elem.name == 'div':
+                senses = part_elem.select('subentry-g > sn-gs > sn-blk')
+                if len(senses) == 0:
+                    senses = part_elem.select('subentry-g > sn-gs > sn-blk-nolist')                    
+            elif part_elem.name == 'h-g':
+                senses = part_elem.select('h-g > sn-gs > sn-blk')
+                if len(senses) == 0:
+                    senses = part_elem.select('h-g > sn-gs > sn-blk-nolist')
+
+            senses_text = ''
             for j, sense in enumerate(senses):
                 print(sense)
                 def_elem = sense.select_one('def')
-
-                if lang == DefinitionLang.ENG:
-                    def_elem.select_one('chn').decompose()
-                elif lang == DefinitionLang.CHN:
-                    def_elem = sense.select_one('chn')
+                if def_elem:
+                    if lang == DefinitionLang.ENG:
+                        def_elem.select_one('chn').decompose()
+                    elif lang == DefinitionLang.CHN:
+                        def_elem = sense.select_one('chn')
+                else:
+                    def_elem = sense
 
                 sentences = self._range_sentence(lang, sense, sentence_count, with_audio)
                 if isinstance(sentences, QueryResult):
@@ -200,16 +225,19 @@ class oalecd9_mdx(MdxService):
                 if j == (sense_count - 1):
                     break
 
-            parts[part] = senses_text + '</ol>'
+            parts[part] = '<ol>' + senses_text + '</ol>'
 
             part_index += 1
             if part_index == part_count:
                 break
 
-        print(parts)
-        result['parts'] = parts
+        #print(parts)
+        #result['parts'] = parts
+        result = self._format_tab(parts)
+
         if len(files) > 0:
-            result['files'] = files
+            #result['files'] = files
+            return QueryResult(result=result, files=files)
         return result
 
     def _range_sentence(self, lang, sense_elem, sentence_count, with_audio, accent=EnglishAccent.American):
